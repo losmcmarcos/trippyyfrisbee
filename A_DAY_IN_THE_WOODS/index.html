@@ -80,7 +80,7 @@ let score = 0, gameState = 'MENU', poisonedLevel = 0, keys = {}, selectedPlayerN
 let userRole = 'bottom', frameCount = 0;
 
 // CONFIGURAZIONE ALBERO CON GOMITI
-const tree = { x: 0, y: 0, trunkW: 65, trunkH: 100, opening: 300, branchWidth: 260, branchLength: 170, offsetX: 0, drift: 0 };
+const tree = { x: 0, y: 0, trunkW: 65, trunkH: 100, opening: 250, branchWidth: 260, branchLength: 170, offsetX: 0, drift: 0 };
 const players = { top: { x: 0, y: 80, speed: 7, skinColor: '#ffd393' }, bottom: { x: 0, y: 0, speed: 7, skinColor: '#ffd393', beardColor: '#d34' } };
 const frisbee = { x: 0, y: 0, r: 9, vy: 0, active: false, owner: 'bottom', trail: [], passedThroughBranches: false };
 const musicNpc = { x: 0, y: 0, anim: 0 };
@@ -160,6 +160,7 @@ if (trippingPercentage >= 60) {
             legAnim: 0
         });
     }
+
 }
 
 // Muovi i ragni esistenti
@@ -179,7 +180,30 @@ spiders.forEach((spider, index) => {
     if (cpuRole === 'top') targetY = Math.max(40, Math.min(tree.y - 110, targetY));
     else targetY = Math.max(tree.y + 110, Math.min(canvas.height - 40, targetY));
     if (cpu.y < targetY - 5) cpu.y += cpuSpeed * 0.5; else if (cpu.y > targetY + 5) cpu.y -= cpuSpeed * 0.5;
-
+// --- LOGICA COLLISIONE RAMI ---
+if (frisbee.active) {
+    const relX = frisbee.x - (tree.x + tree.offsetX); // Posizione del frisbee rispetto al centro dell'albero
+    
+    // Controlliamo se il frisbee è all'altezza dei rami (tra la cima e la base dei rami)
+    if (frisbee.y < tree.y + 20 && frisbee.y > tree.y - tree.branchLength) {
+        
+        // Se X è tra l'apertura centrale e la fine dei rami esterni: SCHIANTO
+        // Math.abs(relX) ci permette di controllare sia il ramo destro che il sinistro contemporaneamente
+        if (Math.abs(relX) > tree.opening / 2 - 5 && Math.abs(relX) < tree.branchWidth / 2 + 10) {
+            playSound('schianto');
+            playSound('merda'); // Se hai l'audio attivato
+            frisbee.active = false; 
+            frisbee.trail = [];
+            setTimeout(resetFrisbee, 600);
+            return; // Interrompi l'update per questo frame
+        } 
+        
+        // Se passa esattamente nel buco
+        else if (Math.abs(relX) <= tree.opening / 2 - 5) {
+            frisbee.passedThroughBranches = true;
+        }
+    }
+}
     if (!frisbee.active && frisbee.owner === cpuRole) setTimeout(() => launch(cpuRole), 600);
 
     if (frisbee.active) {
@@ -202,6 +226,7 @@ spiders.forEach((spider, index) => {
     }
     document.getElementById('score-txt').innerText = "SCORE: " + score.toString().padStart(3, '0');
 }
+
 
 function draw() {
     // Sfondo e Glitch
